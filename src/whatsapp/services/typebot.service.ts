@@ -273,11 +273,12 @@ export class TypebotService {
 
     const types = {
       conversation: msg.conversation,
-      extendedTextMessage: msg.extendedTextMessage?.text,
-      responseRowId: msg.listResponseMessage?.singleSelectReply?.selectedRowId,
+      extendedTextMessage:
+        msg.message && msg.message.extendedTextMessage ? msg.message.extendedTextMessage.text : undefined,
+      listResponseMessage: msg.listResponseMessage ? msg.listResponseMessage.title : undefined,
     };
 
-    this.logger.verbose('type message: ' + types);
+    this.logger.verbose('type message: ' + JSON.stringify(types));
 
     return types;
   }
@@ -525,24 +526,35 @@ export class TypebotService {
 
       if (input) {
         if (input.type === 'choice input') {
-          let formattedText = '';
-
           const items = input.items;
 
-          for (const item of items) {
-            formattedText += `▶️ ${item.content}\n`;
-          }
+          let rowId = 1; // Adicione esta linha
 
-          formattedText = formattedText.replace(/\n$/, '');
-
-          await instance.textMessage({
+          await instance.listMessage({
             number: remoteJid.split('@')[0],
             options: {
-              delay: instance.localTypebot.delay_message || 1000,
+              delay: 1200,
               presence: 'composing',
             },
-            textMessage: {
-              text: formattedText,
+            listMessage: {
+              title: items[0].content, // Primeiro item é o título
+              description: items[1].content, // Segundo item é a descrição
+              buttonText: items[2].content, // Terceiro item é o botão
+              sections: [
+                {
+                  // Crie apenas uma seção chamada "Menu"
+                  title: 'Menu',
+                  rows: items.slice(3).map((item, index) => {
+                    // Os itens subsequentes são os títulos das linhas
+                    const currentRowId = `rowId ${String(rowId++).padStart(3, '0')}`; // Atualize o rowId aqui
+                    return {
+                      title: item.content,
+                      description: '',
+                      rowId: currentRowId, // Use o rowId atualizado aqui
+                    };
+                  }),
+                },
+              ],
             },
           });
         }
